@@ -1,19 +1,13 @@
 package org.example.lendingserver.service.impl;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.example.lendingserver.client.UserServiceClient;
 import org.example.lendingserver.dto.LendingRequestDTO;
 import org.example.lendingserver.dto.LendingResponseDTO;
 import org.example.lendingserver.entity.Lending;
-import org.example.lendingserver.exception.DuplicateLendingException;
 import org.example.lendingserver.exception.LendingNotFoundException;
-import org.example.lendingserver.mapper.LendingMapper;
 import org.example.lendingserver.repository.LendingRepository;
 import org.example.lendingserver.service.LendingService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-
 
 import java.util.List;
 import java.util.UUID;
@@ -23,29 +17,25 @@ import java.util.stream.Collectors;
 public class LendingServiceImpl implements LendingService {
 
     private final LendingRepository lendingRepository;
+    private final UserServiceClient userServiceClient;
 
-    public LendingServiceImpl(LendingRepository lendingRepository) {
+    public LendingServiceImpl(LendingRepository lendingRepository, UserServiceClient userServiceClient) {
         this.lendingRepository = lendingRepository;
+        this.userServiceClient = userServiceClient;
     }
 
     @Override
-    @Transactional
     public LendingResponseDTO createLending(LendingRequestDTO dto) {
-        Lending lending = new Lending();
-        lending.setLendingId(dto.getLendingId());
-        lending.setReaderId(dto.getReaderId());
-        lending.setBookId(dto.getBookId());
-        lending.setBorrowedDate(dto.getBorrowedDate());
-        lending.setDueDate(dto.getDueDate());
-        lending.setReturnDate(dto.getReturnDate());
-        lending.setStatus(dto.getStatus());
+        String id = dto.getLendingId() != null ? dto.getLendingId() : UUID.randomUUID().toString();
+
+        Lending lending = new Lending(id, dto.getReaderId(), dto.getBookId(),
+                dto.getBorrowedDate(), dto.getDueDate(), dto.getReturnDate(), dto.getStatus());
 
         Lending saved = lendingRepository.save(lending);
         return mapToDTO(saved);
     }
 
     @Override
-    @Transactional
     public LendingResponseDTO updateLending(String lendingId, LendingRequestDTO dto) {
         Lending lending = lendingRepository.findById(lendingId)
                 .orElseThrow(() -> new LendingNotFoundException(lendingId));
@@ -62,7 +52,6 @@ public class LendingServiceImpl implements LendingService {
     }
 
     @Override
-    @Transactional
     public void deleteLending(String lendingId) {
         Lending lending = lendingRepository.findById(lendingId)
                 .orElseThrow(() -> new LendingNotFoundException(lendingId));
@@ -70,7 +59,6 @@ public class LendingServiceImpl implements LendingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public LendingResponseDTO getLending(String lendingId) {
         Lending lending = lendingRepository.findById(lendingId)
                 .orElseThrow(() -> new LendingNotFoundException(lendingId));
@@ -78,7 +66,6 @@ public class LendingServiceImpl implements LendingService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<LendingResponseDTO> getAllLendings() {
         return lendingRepository.findAll()
                 .stream()
